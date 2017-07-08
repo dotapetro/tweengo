@@ -1,0 +1,10 @@
+.nav-right.nav-menu{
+    overflow-y: hidden;
+}
+
+.navbar-dropdown{
+    z-index: 3;
+}
+.nav-left{
+    display: inline-block;
+}
