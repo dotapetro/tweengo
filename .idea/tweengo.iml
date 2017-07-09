@@ -16,7 +16,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TemplatesService">
-    <option name="TEMPLATE_CONFIGURATION" value="Django" />
+    <option name="TEMPLATE_CONFIGURATION" value="Jinja2" />
   </component>
   <component name="TestRunnerService">
     <option name="projectConfiguration" value="Nosetests" />

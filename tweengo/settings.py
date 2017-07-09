@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 
 import os
 import jinja2
-from .dj_filters import linebreaks, linebreaksbr
+from .dj_filters import linebreaks, linebreaksbr, datetimeformat
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -57,7 +57,7 @@ ROOT_URLCONF = 'tweengo.urls'
 
 jinja2.filters.FILTERS['linebreaks'] = linebreaks
 jinja2.filters.FILTERS['linebreaksbr'] = linebreaksbr
-
+jinja2.filters.FILTERS['datetimeformat'] = datetimeformat
 TEMPLATES = [
     {
          'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -128,7 +128,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 
