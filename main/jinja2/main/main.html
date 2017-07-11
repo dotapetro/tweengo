@@ -10,7 +10,7 @@
   <link rel="stylesheet" type="text/css" href="https://dansup.github.io/bulma-templates/css/timeline.css">
   <link rel="icon" type="image/png" href="http://bulma.io/favicons/favicon-32x32.png?v=201701041855" sizes="32x32">
   <script src="{{ static('libs/jquery.js') }}"></script>
-  <script src="{{ static('js/ajax_user.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/lodash/4.17.4/lodash.min.js"></script>
   <link rel="stylesheet" href="{{ static('libs/bulma-0.4.3/css/bulma.css') }}">
   <link rel="stylesheet" href="{{ static('css/main.css') }}">
   <style type="text/css">
@@ -18,6 +18,7 @@
   </style>
 </head>
 <body>
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 <nav class="navbar ">
   <div class="navbar-brand">
 
@@ -52,7 +53,7 @@
 
     <div class="nav-center">
       <div class="navbar-item has-dropdown is-hoverable">
-          {% if not user %}
+          {% if not user.is_authenticated %}
               <a class="navbar-link  is-active">
                     Sign in
               </a>
@@ -76,7 +77,6 @@
                     <input class="input" type="password" id="login-password" placeholder="jsmith">
                   </p>
                 </div>
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                 <div class="navbar-item field login-buttons">
                   <p class="control">
                       <button class="input button is-primary" id="sign-in">Sign in</button>
@@ -96,12 +96,47 @@
                 <a class="navbar-link  is-active">
                       Profile
                 </a>
-                <div class="navbar-dropdown login-dropdown">
-            <!-- Name -->
-                <div class="has-text-centered navbar-item">
-                    <label class="label">{{ user.first_name }}&nbsp; {{ user.last_name }} aka {{ user.username }}</label>
+                <div class="navbar-dropdown profile-dropdown">
+
+                    <!-- Name -->
+                    <div class="has-text-centered navbar-item">
+                        <label class="label profile_full_name"><a href="/{{ user.username }}/">{{ user.first_name }}&nbsp; {{ user.last_name }}</a></label>
+                    </div>
+
+                    <!-- Username -->
+                    <div class="has-text-centered navbar-item">
+                        <span class="label profile_username">@{{ user.username }}</span>
+                    </div>
+
+                    <!-- Divider -->
+                    <hr class="navbar-divider">
+
+                    <a class="navbar-item " href="#">
+                        <i class="fa fa-user" aria-hidden="true"></i>&nbsp;
+                        Profile
+                    </a>
+
+                    <a class="navbar-item " href="#">
+                        <i class="fa fa-list-ol icon is-small" aria-hidden="true"></i>&nbsp;
+                        List
+                    </a>
+                    <a class="navbar-item " href="#">
+                        <i class="fa fa-bolt" aria-hidden="true"></i>&nbsp;
+                        Moments
+                    </a>
+
+                    <hr class="navbar-divider">
+                    <a class="navbar-item " href="#">
+                        <i class="fa fa-line-chart" aria-hidden="true"></i>&nbsp;
+                        Advert
+                    </a>
+
+                    <a class="navbar-item " href="#">
+                        <i class="fa fa-bar-chart" aria-hidden="true"></i>&nbsp;
+                        Statistics
+                    </a>
+
                 </div>
-            </div>
           {% endif %}
       </div>
   </div>
@@ -117,7 +152,11 @@
             </header>
             <div class="card-content">
               <a class="card-avatar">
-                <img src="http://placehold.it/128x128" class="card-avatar-img">
+                  {% if pages_user.profile.image %}
+                      <img src="{{ pages_user.profile.image.url }}" class="card-avatar-img">
+                  {% else %}
+                      <img src="http://placehold.it/128x128" class="card-avatar-img">
+                  {% endif %}
               </a>
 
               <div class="card-user">
@@ -128,25 +167,32 @@
                   <a href="#">@<span>{{ pages_user.username }}</span></a>
                 </span>
               </div>
+                {% if not on_self_page %}
+                    {% if not followed %}
+                        <a class="button is-large is-info follow-button" idol_id="{{ pages_user.id }}">Follow</a>
+                    {% else %}
+                        <a class="button is-large is-primary follow-button is-followed" idol_id="{{ pages_user.id }}">Un follow</a>
+                    {% endif %}
 
+                {% endif %}
               <div class="card-stats">
                 <ul class="card-stats-list">
                   <li class="card-stats-item">
                     <a href="#" title="9.840 Tweet">
                       <span class="card-stats-key">Tweets</span>
-                      <span class="card-stats-val">1</span>
+                      <span class="card-stats-val">{{ pages_user.post_set.all()|length }}</span>
                     </a>
                   </li>
                   <li class="card-stats-item">
                     <a href="#/following" title="885 Following">
                       <span class="card-stats-key">Following</span>
-                      <span class="card-stats-val">0</span>
+                        <span class="card-stats-val" id="following">{{ following }}</span>
                     </a>
                   </li>
                   <li class="card-stats-item">
                     <a href="#">
                       <span class="card-stats-key">Followers</span>
-                      <span class="card-stats-val">0</span>
+                        <span class="card-stats-val" id="followers">{{ followers }}</span>
                     </a>
                   </li>
                 </ul>
@@ -165,47 +211,114 @@
           </div>
         </div>
         <div class="column is-6">
-          <div class="box">
-              <!-- Posts -->
-              {% for post in posts %}
+            {% if on_self_page %}
+                <div class="box">
                   <article class="media">
-                      <div class="media-left">
-                        <figure class="image is-64x64">
-                          <img src="http://placehold.it/128x128" alt="Image">
-                        </figure>
-                      </div>
-                      <div class="media-content">
-                        <div class="content">
-                          <p>
-                            <strong>{{ post.author }}</strong> <small>@{{ post.username }}</small> <small style="float:right;">
-                              {% if time_now|datetimeformat('%H')|int - post.time_posted|datetimeformat('%H')|int <= 0 %}
-                                {{ time_now|datetimeformat('%M')|int - post.time_posted|datetimeformat('%M')|int }} minites ago
-                              {% elif time_now|datetimeformat('%d')|int - post.time_posted|datetimeformat('%d')|int <= 0 %}
-                                {{ time_now|datetimeformat('%H')|int - post.time_posted|datetimeformat('%H')|int }} hours ago
-                              {% endif %}
-                          </small>
-                            <br>
-                              {{ post.body|linebreaks|safe }}
-                            </p>
-                        </div>
-                        <nav class="level">
-                          <div class="level-left">
-                            <a class="level-item">
-                              <span class="icon is-small"><i class="fa fa-reply"></i></span>
-                            </a>
-                            <a class="level-item">
-                              <span class="icon is-small"><i class="fa fa-retweet"></i></span>
-                            </a>
-                            <a class="level-item">
-                              <span class="icon is-small"><i class="fa fa-heart"></i></span>
-                            </a>
+                      <figure class="media-left">
+                        <p class="image is-64x64">
+                            {% if user.profile.image %}
+                                <img src="{{ user.profile.image.url }}">
+                            {% else %}
+                                <img src="http://bulma.io/images/placeholders/128x128.png">
+                            {% endif %}
+
+                        </p>
+                      </figure>
+                      <form id="tweet-form">
+                          <div class="media-content">
+                            <div class="field">
+                              <p class="control">
+                                <textarea class="textarea" placeholder="What`s up?" id="tweet-textarea"></textarea>
+                              </p>
+                            </div>
+                            <nav class="level">
+                              <div class="level-left">
+                                <div class="level-item">
+                                  <a class="button is-info" id="tweet-button">Tweet</a>
+                                </div>
+                              </div>
+                              <div class="level-right">
+                                <div class="level-item">
+                                  <label class="checkbox">
+                                    <input type="file" id="image_to_upload">
+                                  </label>
+                                </div>
+                              </div>
+                            </nav>
                           </div>
-                        </nav>
-                      </div>
+                      </form>
                   </article>
-              {% endfor %}
-
-
+               </div>
+            {% endif %}
+          <div class="box" id="posts">
+              <!-- Posts -->
+              {% if posts %}
+                  {% for post in posts %}
+                      <article class="media">
+                          <div class="media-left">
+                            <figure class="image is-64x64">
+                                {% if user.profile.image %}
+                                    <img src="{{ user.profile.image.url }}">
+                                {% else %}
+                                    <img src="http://bulma.io/images/placeholders/128x128.png">
+                                {% endif %}
+                            </figure>
+                          </div>
+                          <div class="media-content">
+                            <div class="content">
+                              <p>
+                                <strong>{{ post.user.first_name }}&nbsp;{{ post.user.last_name }}</strong> <small>@{{ post.user.username }}</small> <small style="float:right;">
+                                {% if time_now|datetimeformat('%Y')|int - post.time_posted|datetimeformat('%Y')|int <= 0  %}
+                                  {% if time_now|datetimeformat('%d')|int - post.time_posted|datetimeformat('%d')|int <= 0 %}
+                                    {% if time_now|datetimeformat('%H')|int - post.time_posted|datetimeformat('%H')|int <= 0 %}
+                                        {{ time_now|datetimeformat('%M')|int - post.time_posted|datetimeformat('%M')|int }} minites ago
+                                    {% else %}
+                                        {{ time_now|datetimeformat('%H')|int - post.time_posted|datetimeformat('%H')|int }} hours ago
+                                    {% endif  %}
+                                  {% elif time_now|datetimeformat('%d')|int - post.time_posted|datetimeformat('%d')|int == 1 %}
+                                      yesterday, at {{ post.time_posted|datetimeformat('%H:%M') }}
+                                  {% else %}
+                                      {{ post.time_posted|datetimeformat('%m-%d at %H:%M') }}
+                                  {% endif %}
+                                {% endif  %}
+                              </small>
+                                {% if post.image %}
+                                    <br>
+                                    <span class="has-text-centered">
+                                        <img src="{{ post.image.url }}">
+                                    </span>
+                                {% endif %}
+                                <br>
+                                  {{ post.body|linebreaks|safe }}
+                                </p>
+                            </div>
+                            <nav class="level">
+                              <div class="level-left">
+                                <a class="level-item">
+                                  <span class="icon is-small"><i class="fa fa-reply"></i></span>
+                                </a>
+                                <a class="level-item">
+                                  <span class="icon is-small"><i class="fa fa-retweet"></i></span>
+                                </a>
+                                <a class="level-item">
+                                 {% if  post.like_set.filter(user_id=user.id)  %}
+                                  <span class="icon is-small like is-liked" post_id="{{ post.id }}"><i class="fa fa-heart"></i>&nbsp;
+                                     <span class="liked_by ">{{ post.like_set.all()|length }}</span>
+                                  </span>
+                                 {% else %}
+                                     <span class="icon is-small like" post_id="{{ post.id }}"><i class="fa fa-heart"></i>&nbsp;
+                                        <span class="liked_by ">{{ post.like_set.all()|length }}</span>
+                                     </span>
+                                 {% endif %}
+                                </a>
+                              </div>
+                            </nav>
+                          </div>
+                      </article>
+                  {% endfor %}
+              {% else %}
+                  <p id="no_posts_yet">No posts yet!</p>
+              {% endif %}
 
           </div>
         </div>
@@ -287,8 +400,53 @@
         </div>
       </div>
     </div>
-      <script src="{{ static('js/ajax_setup.js') }}"></script>
-      <script src="{{ static('js/main.js') }}"></script>
   </section>
+      <script type="text/template" id="post-template">
+          <article class="media">
+              <div class="media-left">
+                  <figure class="image is-64x64">
+                      {% if user.profile.image %}
+                          <img src="{{ user.profile.image.url }}">
+                      {% else %}
+                          <img src="http://bulma.io/images/placeholders/128x128.png">
+                      {% endif %}
+                  </figure>
+              </div>
+              <div class="media-content">
+                  <div class="content">
+                      <p>
+                          <strong>{{ pages_user.first_name }}&nbsp; {{ pages_user.last_name }}</strong> <small>@{{ pages_user.username }}</small> <small style="float:right;">
+                          <%= time_posted %>
+                      </small>
+                          <%if (image_url) { %>
+                            <div class="has-text-centered">
+                                <img src="<%= image_url %>">
+                            </div>
+                          <% } %>
+                          <br>
+                      <span class="body">
+                          <%=body%>
+                      </span>
+                      </p>
+                  </div>
+                  <nav class="level">
+                      <div class="level-left">
+                          <a class="level-item">
+                              <span class="icon is-small"><i class="fa fa-reply"></i></span>
+                          </a>
+                          <a class="level-item">
+                              <span class="icon is-small"><i class="fa fa-retweet"></i></span>
+                          </a>
+                          <a class="level-item">
+                              <span class="icon is-small"><i class="fa fa-heart"></i></span>
+                          </a>
+                      </div>
+                  </nav>
+              </div>
+          </article>
+      </script>
+      <script src="{{ static('js/ajax_setup.js') }}"></script>
+      <script src="{{ static('js/ajax_user.js') }}"></script>
+      <script src="{{ static('js/main.js') }}"></script>
 </body>
 </html>
