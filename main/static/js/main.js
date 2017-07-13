@@ -18,19 +18,7 @@ $('#tweet-button').click(function () {
     }
 });
 
-$('.like').click(function () {
-    var liked_by = $(this).find('.liked_by');
-    if (!$(this).hasClass('is-liked')) {
-        liked_by.text(parseInt(liked_by.text()) + 1);
-        $(this).addClass('is-liked')
-    }
-    else{
-        liked_by.text(parseInt(liked_by.text()) - 1);
-        $(this).removeClass('is-liked')
-    }
-    like_unlike($(this).attr('post_id'))
 
-});
 
 $('.follow-button').click(function () {
    follow_un_follow(parseInt($(this).attr('idol_id')))

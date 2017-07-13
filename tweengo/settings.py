@@ -143,3 +143,35 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, '/media')
 MEDIA_URL = '/media/'
+
+THROTTLE_ZONES = {
+    'default': {
+        'VARY': 'throttle.zones.RemoteIP',
+        'NUM_BUCKETS': 2,  # Number of buckets worth of history to keep. Must be at least 2
+        'BUCKET_INTERVAL': 1,  # Period of time to enforce limits.
+        'BUCKET_CAPACITY': 3,  # Maximum number of requests allowed within BUCKET_INTERVAL
+    },
+    'lesser': {
+        'VARY': 'throttle.zones.RemoteIP',
+        'NUM_BUCKETS': 2,  # Number of buckets worth of history to keep. Must be at least 2
+        'BUCKET_INTERVAL': 1.5,  # Period of time to enforce limits.
+        'BUCKET_CAPACITY': 2,  # Maximum number of requests allowed within BUCKET_INTERVAL
+    },
+    'minimal': {
+        'VARY': 'throttle.zones.RemoteIP',
+        'NUM_BUCKETS': 2,  # Number of buckets worth of history to keep. Must be at least 2
+        'BUCKET_INTERVAL': 2,  # Period of time to enforce limits.
+        'BUCKET_CAPACITY': 1,  # Maximum number of requests allowed within BUCKET_INTERVAL
+    },
+}
+
+# Where to store request counts.
+THROTTLE_BACKEND = 'throttle.backends.cache.CacheBackend'
+
+# Optional after Redis backend is chosen ('throttle.backends.redispy.RedisBackend')
+THROTTLE_REDIS_HOST = 'localhost'
+THROTTLE_REDIS_PORT = 6379
+THROTTLE_REDIS_DB = 0
+
+# Force throttling when DEBUG=True
+THROTTLE_ENABLED = True

@@ -13,6 +13,7 @@
   <script src="https://cdn.jsdelivr.net/lodash/4.17.4/lodash.min.js"></script>
   <link rel="stylesheet" href="{{ static('libs/bulma-0.4.3/css/bulma.css') }}">
   <link rel="stylesheet" href="{{ static('css/main.css') }}">
+  <script src="{{ static('js/dateformat.js') }}"></script>
   <style type="text/css">
 
   </style>
@@ -184,7 +185,7 @@
                     </a>
                   </li>
                   <li class="card-stats-item">
-                    <a href="#/following" title="885 Following">
+                    <a title="885 Following">
                       <span class="card-stats-key">Following</span>
                         <span class="card-stats-val" id="following">{{ following }}</span>
                     </a>
@@ -251,74 +252,7 @@
                </div>
             {% endif %}
           <div class="box" id="posts">
-              <!-- Posts -->
-              {% if posts %}
-                  {% for post in posts %}
-                      <article class="media">
-                          <div class="media-left">
-                            <figure class="image is-64x64">
-                                {% if user.profile.image %}
-                                    <img src="{{ user.profile.image.url }}">
-                                {% else %}
-                                    <img src="http://bulma.io/images/placeholders/128x128.png">
-                                {% endif %}
-                            </figure>
-                          </div>
-                          <div class="media-content">
-                            <div class="content">
-                              <p>
-                                <strong>{{ post.user.first_name }}&nbsp;{{ post.user.last_name }}</strong> <small>@{{ post.user.username }}</small> <small style="float:right;">
-                                {% if time_now|datetimeformat('%Y')|int - post.time_posted|datetimeformat('%Y')|int <= 0  %}
-                                  {% if time_now|datetimeformat('%d')|int - post.time_posted|datetimeformat('%d')|int <= 0 %}
-                                    {% if time_now|datetimeformat('%H')|int - post.time_posted|datetimeformat('%H')|int <= 0 %}
-                                        {{ time_now|datetimeformat('%M')|int - post.time_posted|datetimeformat('%M')|int }} minites ago
-                                    {% else %}
-                                        {{ time_now|datetimeformat('%H')|int - post.time_posted|datetimeformat('%H')|int }} hours ago
-                                    {% endif  %}
-                                  {% elif time_now|datetimeformat('%d')|int - post.time_posted|datetimeformat('%d')|int == 1 %}
-                                      yesterday, at {{ post.time_posted|datetimeformat('%H:%M') }}
-                                  {% else %}
-                                      {{ post.time_posted|datetimeformat('%m-%d at %H:%M') }}
-                                  {% endif %}
-                                {% endif  %}
-                              </small>
-                                {% if post.image %}
-                                    <br>
-                                    <span class="has-text-centered">
-                                        <img src="{{ post.image.url }}">
-                                    </span>
-                                {% endif %}
-                                <br>
-                                  {{ post.body|linebreaks|safe }}
-                                </p>
-                            </div>
-                            <nav class="level">
-                              <div class="level-left">
-                                <a class="level-item">
-                                  <span class="icon is-small"><i class="fa fa-reply"></i></span>
-                                </a>
-                                <a class="level-item">
-                                  <span class="icon is-small"><i class="fa fa-retweet"></i></span>
-                                </a>
-                                <a class="level-item">
-                                 {% if  post.like_set.filter(user_id=user.id)  %}
-                                  <span class="icon is-small like is-liked" post_id="{{ post.id }}"><i class="fa fa-heart"></i>&nbsp;
-                                     <span class="liked_by ">{{ post.like_set.all()|length }}</span>
-                                  </span>
-                                 {% else %}
-                                     <span class="icon is-small like" post_id="{{ post.id }}"><i class="fa fa-heart"></i>&nbsp;
-                                        <span class="liked_by ">{{ post.like_set.all()|length }}</span>
-                                     </span>
-                                 {% endif %}
-                                </a>
-                              </div>
-                            </nav>
-                          </div>
-                      </article>
-                  {% endfor %}
-              {% else %}
-                  <p id="no_posts_yet">No posts yet!</p>
-              {% endif %}
+
 
           </div>
         </div>
@@ -437,13 +371,29 @@
                           <a class="level-item">
                               <span class="icon is-small"><i class="fa fa-retweet"></i></span>
                           </a>
-                          <a class="level-item">
-                              <span class="icon is-small"><i class="fa fa-heart"></i></span>
-                          </a>
+                            <%if (liked) { %>
+                                <div class="like is-liked" post_id="<%= post_id %>">
+                                  <a class="level-item">
+                                      <span class="icon is-small"><i class="fa fa-heart"></i></span>
+                                      <span class="liked_by"><%= likes %></span>
+                                  </a>
+                                </div>
+                            <% } %>
+                          <%if (!liked) { %>
+                                <div class="like" post_id="<%= post_id %>">
+                                  <a class="level-item">
+                                      <span class="icon is-small"><i class="fa fa-heart"></i></span>
+                                      <span class="liked_by"><%= likes %></span>
+                                  </a>
+                                </div>
+                          <% } %>
                       </div>
                   </nav>
               </div>
           </article>
+      </script>
+      <script>
+          var pages_user_id = {{ pages_user.id }};
       </script>
       <script src="{{ static('js/ajax_setup.js') }}"></script>
       <script src="{{ static('js/ajax_user.js') }}"></script>

@@ -19,13 +19,11 @@ def main_view(request, pages_user=None):
         on_self_page = True
     UserModel = get_user_model()
     pages_user = UserModel.objects.get(username=pages_user)
-    posts = pages_user.post_set.order_by('-time_posted')
     followed = bool(Follower.objects.filter(idol=pages_user, user=user))
     followers = len(Follower.objects.filter(idol=pages_user))
     following = len(Follower.objects.filter(user=pages_user))
     return render(request, 'main/main.html', {'user': user,
                                               'pages_user': pages_user,
-                                              'posts': posts,
                                               'on_self_page': on_self_page,
                                               'followers': followers,
                                               'following': following,

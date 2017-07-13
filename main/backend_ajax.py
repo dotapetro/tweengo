@@ -1,12 +1,15 @@
 import logging
+import datetime
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.http import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 from .models import Post, Like, Follower
 from .forms import PostImageForm
+from throttle.decorators import throttle
 logger = logging.getLogger(__name__)
 
 
+@throttle(zone='minimal')
 def login_user(request):
     if request.method == 'POST':
         if request.POST['action'] != 'login_user':
@@ -42,6 +45,7 @@ def login_user(request):
             return JsonResponse(data)
 
 
+@throttle(zone='minimal')
 def tweet(request):
     if request.method == 'POST':
         Post.objects.create(user=request.user, body=request.POST['body']).save()
@@ -51,6 +55,7 @@ def tweet(request):
         return JsonResponse(data)
 
 
+@throttle(zone='minimal')
 def add_image_to_tweet(request):
     if request.method == 'POST':
         form = PostImageForm(files=request.FILES)
@@ -71,21 +76,27 @@ def add_image_to_tweet(request):
         return JsonResponse(data)
 
 
+@throttle(zone='default')
 def like_unlike(request):
     if request.method == 'POST':
+        logger.error(Like.objects.values())
         post_id = request.POST['post_id']
         post = Post.objects.get(id=post_id)
         try:
             like = post.like_set.get(user_id=request.user.id)
             like.delete()
         except ObjectDoesNotExist:
-            Like.objects.create(user=request.user, post=post)
+            like = Like.objects.create(user=request.user, post=post)
+            like.save()
+
+        logger.error(Like.objects.values())
         data = {
             'liked': True,
         }
         return JsonResponse(data)
 
 
+@throttle(zone='default')
 def follow_un_follow(request):
     if request.method == 'POST':
         UserModel = get_user_model()
@@ -102,26 +113,39 @@ def follow_un_follow(request):
 
 
 def get_post_batch(number):
-    return [number*20 - 20, number * 20 - 1]
+    return [number*20 - 20, number * 20]
 
 
+@throttle(zone='lesser')
 def load_more_posts(request):
     if request.method == 'POST':
         UserModel = get_user_model()
         pages_user = UserModel.objects.get(id=request.POST['pages_user_id'])
         batch_range = get_post_batch(int(request.POST['batch']))
-        if batch_range[1] > pages_user.post_set.count:
-            if batch_range[0] > pages_user.post_set.count:
+        if batch_range[1] > pages_user.post_set.count():
+            if batch_range[0] > pages_user.post_set.count():
                 data = {
                     'post_loaded': False,
                     'posts_ended': True
                 }
                 return JsonResponse(data)
-            batch_range[1] = pages_user.post_set.count - 1
+            batch_range[1] = pages_user.post_set.count()
+
         posts = pages_user.post_set.order_by('-time_posted')[batch_range[0]: batch_range[1]]
+        package = []
+        for post in posts:
+            if post.image:
+                package.append({'body': post.body, 'time_posted': post.time_posted.strftime('%d,%m,%y,%H,%M'),
+                                'likes': len(Like.objects.filter(post_id=post.id)), 'image': post.image.url,
+                                'id': post.id, 'liked': bool(Like.objects.filter(post=post, user=request.user))})
+            else:
+                package.append({'body': post.body, 'time_posted': post.time_posted.strftime('%d,%m,%y,%H,%M'),
+                                'likes': len(Like.objects.filter(post=post)), 'image': False,
+                                'id': post.id, 'liked': bool(Like.objects.filter(post=post, user=request.user))})
+
         data = {
-            'post_loaded': True,
-            'posts': [{'body': post.body, 'time_posted': post.time_posted, 'image_url': post.image.url} for post in posts]
+            'posts_loaded': True,
+            'posts': package
         }
         return JsonResponse(data)
 
